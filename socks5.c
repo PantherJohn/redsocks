@@ -299,34 +299,36 @@ static void socks5_read_cb(struct bufferevent *buffev, void *_arg)
 
 	redsocks_touch_client(client);
 
-	if (client->state == socks5_method_sent) {
-		socks5_read_auth_methods(buffev, client, socks5);
-	}
-	else if (client->state == socks5_auth_sent) {
-		socks5_read_auth_reply(buffev, client, socks5);
-	}
-	else if (client->state == socks5_request_sent) {
-		socks5_read_reply(buffev, client, socks5);
-	}
-	else if (client->state == socks5_skip_domain) {
-		socks5_addr_ipv4 ipv4; // all socks5_addr*.port are equal
-		uint8_t size;
-		if (redsocks_read_expected(client, buffev->input, &size, sizes_greater_equal, sizeof(size)) < 0)
-			return;
-		socks5->to_skip = size + sizeof(ipv4.port);
-		redsocks_write_helper(
-			buffev, client,
-			NULL, socks5_skip_address, socks5->to_skip
-			);
-	}
-	else if (client->state == socks5_skip_address) {
-		uint8_t data[socks5->to_skip];
-		if (redsocks_read_expected(client, buffev->input, data, sizes_greater_equal, socks5->to_skip) < 0)
-			return;
-		redsocks_start_relay(client);
-	}
-	else {
-		redsocks_drop_client(client);
+	switch (client->state) {
+		case socks5_method_sent:
+			socks5_read_auth_methods(buffev, client, socks5);
+			break;
+		case socks5_auth_sent:
+			socks5_read_auth_reply(buffev, client, socks5);
+			break;
+		case socks5_request_sent:
+			socks5_read_reply(buffev, client, socks5);
+			break;
+		case socks5_skip_domain:
+			socks5_addr_ipv4 ipv4; // all socks5_addr*.port are equal
+			uint8_t size;
+			if (redsocks_read_expected(client, buffev->input, &size, sizes_greater_equal, sizeof(size)) < 0)
+				return;
+			socks5->to_skip = size + sizeof(ipv4.port);
+			redsocks_write_helper(
+				buffev, client,
+				NULL, socks5_skip_address, socks5->to_skip
+				);
+			break;
+		case socks5_skip_address:
+			uint8_t data[socks5->to_skip];
+			if (redsocks_read_expected(client, buffev->input, data, sizes_greater_equal, socks5->to_skip) < 0)
+				return;
+			redsocks_start_relay(client);
+			break;
+		default:
+			redsocks_drop_client(client);
+			break;
 	}
 }
 

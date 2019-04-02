@@ -748,20 +748,22 @@ void redsocks_shutdown(redsocks_client *client, struct bufferevent *buffev, int 
 	assert(buffev == client->client || buffev == client->relay);
 	assert(event_get_fd(&buffev->ev_read) == event_get_fd(&buffev->ev_write));
 
-	if (how == SHUT_RD) {
-		strhow = "SHUT_RD";
-		evhow = EV_READ;
-		strevhow = "EV_READ";
-	}
-	else if (how == SHUT_WR) {
-		strhow = "SHUT_WR";
-		evhow = EV_WRITE;
-		strevhow = "EV_WRITE";
-	}
-	else if (how == SHUT_RDWR) {
-		strhow = "SHUT_RDWR";
-		evhow = EV_READ|EV_WRITE;
-		strevhow = "EV_READ|EV_WRITE";
+	switch (how) {
+		case SHUT_RD:
+			strhow = "SHUT_RD";
+			evhow = EV_READ;
+			strevhow = "EV_READ";
+			break;
+		case SHUT_WR:
+			strhow = "SHUT_WR";
+			evhow = EV_WRITE;
+			strevhow = "EV_WRITE";
+			break;
+		case SHUT_RDWR:
+			strhow = "SHUT_RDWR";
+			evhow = EV_READ|EV_WRITE;
+			strevhow = "EV_READ|EV_WRITE";
+			break;
 	}
 
 	assert(strhow && strevhow);
@@ -1181,19 +1183,16 @@ static void redsocks_accept_client(int fd, short what, void *_arg)
 
 	// socket is really bound now (it could be bound to 0.0.0.0)
 	addrlen = sizeof(myaddr);
-	error = getsockname(client_fd, (struct sockaddr*)&myaddr, &addrlen);
-	if (error) {
+	if (error = getsockname(client_fd, (struct sockaddr*)&myaddr, &addrlen)) {
 		log_errno(LOG_WARNING, "getsockname");
 		goto fail;
 	}
 
-	error = getdestaddr(client_fd, &clientaddr, &myaddr, &destaddr);
-	if (error) {
+	if (error = getdestaddr(client_fd, &clientaddr, &myaddr, &destaddr)) {
 		goto fail;
 	}
 
-	error = fcntl_nonblock(client_fd);
-	if (error) {
+	if (error = fcntl_nonblock(client_fd)) {
 		log_errno(LOG_ERR, "fcntl");
 		goto fail;
 	}

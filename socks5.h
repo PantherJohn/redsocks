@@ -38,8 +38,8 @@ typedef struct socks5_addr_ipv4_t {
 
 typedef struct socks5_addr_domain_t {
 	uint8_t size;
-	uint8_t more[1];
-	/* uint16_t port; */
+	uint8_t more[255];
+	uint16_t port;
 } PACKED socks5_addr_domain;
 
 typedef struct socks5_addr_ipv6_t {
